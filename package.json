@@ -4,7 +4,10 @@
   "description": "Simple to use package for managing your store's orders using Shopify's api.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:dev": "npx nodemon",
+    "start": "npm run build && node dist/index.js",
+    "build": "rimraf ./dist && tsc"
   },
   "repository": {
     "type": "git",
@@ -20,5 +23,12 @@
   "bugs": {
     "url": "https://github.com/davud600/shopify-order-manager/issues"
   },
-  "homepage": "https://github.com/davud600/shopify-order-manager#readme"
+  "homepage": "https://github.com/davud600/shopify-order-manager#readme",
+  "devDependencies": {
+    "@types/node": "^20.6.3",
+    "nodemon": "^3.0.1",
+    "rimraf": "^5.0.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
 }
