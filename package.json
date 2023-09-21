@@ -1,0 +1,24 @@
+{
+  "name": "shopify-order-manager",
+  "version": "1.0.0",
+  "description": "Simple to use package for managing your store's orders using Shopify's api.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davud600/shopify-order-manager.git"
+  },
+  "keywords": [
+    "Shopify",
+    "Orders",
+    "Typescript"
+  ],
+  "author": "davud600",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/davud600/shopify-order-manager/issues"
+  },
+  "homepage": "https://github.com/davud600/shopify-order-manager#readme"
+}
