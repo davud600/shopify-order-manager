@@ -1,5 +1,5 @@
 src
 tsconfig.json
 .prettierrc.json
-nodemons.json
+nodemon.json
 package-lock.json
