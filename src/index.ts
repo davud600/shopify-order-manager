@@ -1,53 +1,75 @@
-import fetch from 'node-fetch'
 import fs from 'fs'
-
-export interface ConstructorParameters {
-  accessToken: string
-  apiUrl?: string
-}
+import fetch, { type HeadersInit } from 'node-fetch'
+import {
+  type deleteCanceledOrdersParams,
+  type deleteOrdersParams,
+  type deleteOrdersWithFilterParams,
+  type ShopifyOrderManagerConstructorParameters,
+  type uploadOrdersFromJsonParams,
+} from './types.js'
 
 export default class ShopifyOrderManager {
   private accessToken: string
   private apiUrl?: string
+  private reqHeaders: HeadersInit
 
-  public constructor({ accessToken, apiUrl }: ConstructorParameters) {
+  public constructor({
+    accessToken,
+    apiUrl,
+    reqHeaders,
+  }: ShopifyOrderManagerConstructorParameters) {
     this.accessToken = accessToken
     this.apiUrl = apiUrl
+    this.reqHeaders = {
+      'content-type': 'application/json',
+      'X-Shopify-Access-Token': this.accessToken,
+      ...reqHeaders,
+    }
   }
 
-  public async deleteOrdersFromShopifyWithFilter(
-    filterCallback: (order: any) => any[]
-  ) {
-    // Get All order ids
-    const res = await fetch(`${this.apiUrl}/orders.json?status=any&limit=250`, {
-      method: 'get',
+  /**
+   * Get all orders, map them to object with an id and cancel_reason, delete the canceled ones.
+   */
+  public async deleteCanceledOrders({
+    onStartedDeleting,
+    onFinishedDeleting,
+  }: deleteCanceledOrdersParams): Promise<void> {
+    let ordersToDelete: {
+      id: string
+      canceled: boolean
+    }[] = []
 
-      headers: {
-        'X-Shopify-Access-Token': this.accessToken,
-        'content-type': 'application/json',
-      },
-    })
-    const data = (await res.json()) as {
-      orders: { id: string; cancel_reason?: string }[]
-    }
-    const orders = data.orders.map((order) => {
-      return {
-        id: order.id,
-        canceled: order.cancel_reason != null,
+    try {
+      const res = await fetch(
+        `${this.apiUrl}/orders.json?status=any&limit=250`,
+        {
+          method: 'get',
+          headers: this.reqHeaders,
+        }
+      )
+
+      const data = (await res.json()) as {
+        orders: { id: string; cancel_reason?: string }[]
       }
-    })
-    const ordersToDelete = orders.filter(filterCallback)
-    console.log(`Orders to delete: ${ordersToDelete.length}`)
 
-    // Delete all orders
+      ordersToDelete = data.orders.map((order) => {
+        return {
+          id: order.id,
+          canceled: order.cancel_reason != null,
+        }
+      })
+    } catch (error) {
+      console.error(error)
+    }
+
+    console.log(`Orders to delete: ${ordersToDelete.length}`)
+    if (!!onStartedDeleting) onStartedDeleting()
+
     for (let index = 0; index < ordersToDelete.length; index++) {
       try {
         await fetch(`${this.apiUrl}/orders/${ordersToDelete[index].id}.json`, {
           method: 'delete',
-          headers: {
-            'X-Shopify-Access-Token': this.accessToken,
-            'content-type': 'application/json',
-          },
+          headers: this.reqHeaders,
         })
       } catch (error) {
         console.error(error)
@@ -56,32 +78,97 @@ export default class ShopifyOrderManager {
       console.log(`Deleted order with id: ${ordersToDelete[index].id}`)
     }
 
-    console.log('Deleted all orders')
+    console.log('Deleted all canceled orders!')
+    if (!!onFinishedDeleting) onFinishedDeleting()
   }
 
-  public async deleteOrdersFromShopify() {
-    // Get All order ids
-    const res = await fetch(`${this.apiUrl}/orders.json?status=any&limit=250`, {
-      method: 'get',
+  /**
+   * Get all orders, map them to object with just an id, apply filter and delete them.
+   */
+  public async deleteOrdersWithFilter({
+    filterCallback,
+    onStartedDeleting,
+    onFinishedDeleting,
+  }: deleteOrdersWithFilterParams): Promise<void> {
+    let ordersToDelete: { id: string; canceled: boolean }[] = []
 
-      headers: {
-        'X-Shopify-Access-Token': this.accessToken,
-        'content-type': 'application/json',
-      },
-    })
-    const data = (await res.json()) as { orders: { id: string }[] }
-    const orderIds = data.orders.map((order) => order.id)
+    try {
+      const res = await fetch(
+        `${this.apiUrl}/orders.json?status=any&limit=250`,
+        {
+          method: 'get',
+          headers: this.reqHeaders,
+        }
+      )
 
-    // Delete all orders
+      const data = (await res.json()) as {
+        orders: { id: string; cancel_reason?: string }[]
+      }
+
+      const orders = data.orders.map((order) => {
+        return {
+          id: order.id,
+          canceled: order.cancel_reason != null,
+        }
+      })
+
+      ordersToDelete = !!filterCallback ? orders.filter(filterCallback) : orders
+    } catch (error) {
+      console.error(error)
+    }
+
+    console.log(`Orders to delete: ${ordersToDelete.length}`)
+    if (!!onStartedDeleting) onStartedDeleting()
+
+    for (let index = 0; index < ordersToDelete.length; index++) {
+      try {
+        await fetch(`${this.apiUrl}/orders/${ordersToDelete[index].id}.json`, {
+          method: 'delete',
+          headers: this.reqHeaders,
+        })
+      } catch (error) {
+        console.error(error)
+        break
+      }
+      console.log(`Deleted order with id: ${ordersToDelete[index].id}`)
+    }
+
+    console.log('Deleted orders!')
+    if (!!onFinishedDeleting) onFinishedDeleting()
+  }
+
+  /**
+   * Fetch all orders (shopify's api limits to 250) and delete them.
+   */
+  public async deleteOrders({
+    onStartedDeleting,
+    onFinishedDeleting,
+  }: deleteOrdersParams): Promise<void> {
+    let orderIds: string[] = []
+
+    try {
+      const res = await fetch(
+        `${this.apiUrl}/orders.json?status=any&limit=250`,
+        {
+          method: 'get',
+          headers: this.reqHeaders,
+        }
+      )
+      const data = (await res.json()) as { orders: { id: string }[] }
+
+      orderIds = data.orders.map((order) => order.id)
+    } catch (error) {
+      console.error(error)
+    }
+
+    console.log(`Orders to delete: ${orderIds.length}`)
+    if (!!onStartedDeleting) onStartedDeleting()
+
     for (let index = 0; index < orderIds.length; index++) {
       try {
         await fetch(`${this.apiUrl}/orders/${orderIds[index]}.json`, {
           method: 'delete',
-
-          headers: {
-            'X-Shopify-Access-Token': this.accessToken,
-            'content-type': 'application/json',
-          },
+          headers: this.reqHeaders,
         })
       } catch (error) {
         console.error(error)
@@ -91,27 +178,30 @@ export default class ShopifyOrderManager {
       console.log(`Deleted order number: ${index}`)
     }
 
-    console.log('Deleted all orders')
+    console.log('Deleted all orders!')
+    if (!!onFinishedDeleting) onFinishedDeleting()
   }
 
-  public async getOrdersFromShopify() {
+  /**
+   * Fetch all orders (shopify's api limits to 250)
+   */
+  public async getOrders(): Promise<unknown> {
     const res = await fetch(`${this.apiUrl}/orders.json?status=any&limit=250`, {
       method: 'get',
-
-      headers: {
-        'X-Shopify-Access-Token': this.accessToken,
-        'content-type': 'application/json',
-      },
+      headers: this.reqHeaders,
     })
     const data = await res.json()
 
     return data
   }
 
-  public async uploadOrdersFromJson(
-    ordersJsonFilePath: string,
-    ordersMappingCallback: (order: any) => any[]
-  ) {
+  /**
+   * Upload orders to shopify from json data
+   */
+  public async uploadOrdersFromJson({
+    ordersJsonFilePath,
+    ordersMappingCallback,
+  }: uploadOrdersFromJsonParams): Promise<void> {
     const rawdata = fs.readFileSync(ordersJsonFilePath)
     const orders = JSON.parse(rawdata.toString())
     let updatedOrdersArray = []
