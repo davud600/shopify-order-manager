@@ -1,6 +1,6 @@
 {
   "name": "shopify-order-manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Simple to use package for managing your store's orders using Shopify's api.",
   "main": "index.js",
   "type": "module",
