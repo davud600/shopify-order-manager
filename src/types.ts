@@ -2,7 +2,7 @@ import { type HeadersInit } from 'node-fetch'
 
 export interface ShopifyOrderManagerConstructorParameters {
   accessToken: string
-  apiUrl?: string
+  apiUrl: string
   reqHeaders?: HeadersInit
 }
 

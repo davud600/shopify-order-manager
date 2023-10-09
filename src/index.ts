@@ -10,7 +10,7 @@ import {
 
 export default class ShopifyOrderManager {
   private accessToken: string
-  private apiUrl?: string
+  private apiUrl: string
   private reqHeaders: HeadersInit
 
   public constructor({
