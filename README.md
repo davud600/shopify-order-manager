@@ -25,11 +25,13 @@ const s = new ShopifyOrderManager({
   [
     {
       "Products": [
-        "Product ID": 12345678,
-        "Variant ID": 123456789,
-        "SKU": "00000-000",
-        "Quantity": 1,
-        "Price": 59.90
+        {
+          "Product ID": 12345678,
+          "Variant ID": 123456789,
+          "SKU": "00000-000",
+          "Quantity": 1,
+          "Price": 59.90
+        }
       ],
       "Financial Status": "paid",
       "Transaction kind": "sale",
